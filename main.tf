@@ -1,10 +1,10 @@
-resource "aws_s3_bucket" "this" {
+resource "aws_s3_bucket" "s3_bucket" {
   count = var.create_bucket ? 1 : 0
 
   bucket              = var.bucket
   bucket_prefix       = var.bucket_prefix
   acl                 = var.acl
-  tags                = var.tags
+  tags                = merge({created_by_module = "tfe-aws-s3-module"}, var.tags )
   force_destroy       = var.force_destroy
   acceleration_status = var.acceleration_status
   request_payer       = var.request_payer
@@ -227,10 +227,10 @@ resource "aws_s3_bucket" "this" {
 
 }
 
-resource "aws_s3_bucket_policy" "this" {
+resource "aws_s3_bucket_policy" "s3_bucket_policy" {
   count = var.create_bucket && (var.attach_elb_log_delivery_policy || var.attach_policy) ? 1 : 0
 
-  bucket = aws_s3_bucket.this[0].id
+  bucket = aws_s3_bucket.s3_bucket[0].id
   policy = var.attach_elb_log_delivery_policy ? data.aws_iam_policy_document.elb_log_delivery[0].json : var.policy
 }
 
@@ -257,17 +257,17 @@ data "aws_iam_policy_document" "elb_log_delivery" {
     ]
 
     resources = [
-      "arn:aws:s3:::${aws_s3_bucket.this[0].id}/*",
+      "arn:aws:s3:::${aws_s3_bucket.s3_bucket[0].id}/*",
     ]
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "this" {
+resource "aws_s3_bucket_public_access_block" "s3_bucket_public" {
   count = var.create_bucket && var.attach_public_policy ? 1 : 0
 
   # Chain resources (s3_bucket -> s3_bucket_policy -> s3_bucket_public_access_block)
   # to prevent "A conflicting conditional operation is currently in progress against this resource."
-  bucket = (var.attach_elb_log_delivery_policy || var.attach_policy) ? aws_s3_bucket_policy.this[0].id : aws_s3_bucket.this[0].id
+  bucket = (var.attach_elb_log_delivery_policy || var.attach_policy) ? aws_s3_bucket_policy.s3_bucket_policy[0].id : aws_s3_bucket.s3_bucket[0].id
 
   block_public_acls       = var.block_public_acls
   block_public_policy     = var.block_public_policy

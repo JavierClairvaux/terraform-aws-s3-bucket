@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "us-east-2"
+}
+
 locals {
   bucket_name = "s3-bucket-${random_pet.this.id}"
 }
